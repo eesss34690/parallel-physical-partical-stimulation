@@ -13,3 +13,7 @@
 - Pthread
 - OpenMP
 - CUDA
+## Job Distribution
+||Brute Force|Sort & Sweep|Uniform Grid|Hierarchical Grid|Octree|Loose Octree|KDTree|
+|-|-|-|-|-|-|-|-|
+|In Charge|JoeHuang99|JoeHuang99|JoeHuang99|niangao19|eesss34690|eesss34690|niangao19|

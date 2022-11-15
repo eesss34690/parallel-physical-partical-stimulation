@@ -93,7 +93,7 @@ static float                                            g_f32RadiusMin = 1.25f;
 static float                                            g_f32RadiusMax = 7.25f;
 
 // [rad] Number of objects to generate
-static int                                              g_i32ObjectCount = 1000;
+static int                                              g_i32ObjectCount = 3000;
 
 // [rad] Used to assign unique ids to objects
 static int                                              g_i32LastId = 0;
@@ -101,8 +101,8 @@ static int                                              g_i32LastId = 0;
 static float                                            g_f32StartOffset = 50.0f;
 
 // [rad] Bounding box for all objects
-static SpatialTest::Vector3                             g_vec3ValuesMax = SpatialTest::Vector3(100.0f, 100.0f, 100.0f);
-static SpatialTest::Vector3                             g_vec3ValuesMin = SpatialTest::Vector3(-100.0f, -100.0f, -100.0f);
+static SpatialTest::Vector3                             g_vec3ValuesMax = SpatialTest::Vector3(150.0f, 150.0f, 150.0f);
+static SpatialTest::Vector3                             g_vec3ValuesMin = SpatialTest::Vector3(-150.0f, -150.0f, -150.0f);
 
 // [rad] Number of hash buckets to use in Uniform grid and Hierarchical grid
 static int                                              g_i32HashBucketCount = 2048;
@@ -110,8 +110,8 @@ static int                                              g_i32HashBucketCount = 2
 static float                                            g_f32Frame = 0.015f;
 
 // [rad] Screen width and height
-static int                                              g_i32ScreenWidth = 800;
-static int                                              g_i32ScreenHeight = 600;
+static int                                              g_i32ScreenWidth = 1600;
+static int                                              g_i32ScreenHeight = 1200;
 
 static int                                              g_i32LastX = 0;
 static int                                              g_i32LastY = 0;
