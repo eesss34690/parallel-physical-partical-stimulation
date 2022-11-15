@@ -1,4 +1,4 @@
-# Install script for directory: /home/nems/spatial-collision-datastructures
+# Install script for directory: /home/nems/parallel-physical-partical-stimulation
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -45,5 +45,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/home/nems/spatial-collision-datastructures/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/home/nems/parallel-physical-partical-stimulation/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")

@@ -78,7 +78,7 @@
 #include "Octree.h"
 #include "LooseOctree.h"
 #include "Kdtree.h"
-
+#include <omp.h>
 #include "Vector3.h"
 
 
@@ -832,8 +832,6 @@ static void RenderScene()
         glBegin(GL_LINES);
 
             glVertex3f(-150.0f, 0.0f, 0.0f);
-            glVertex3f(150.0f, 0.0f, 0.0f);
-
             glVertex3f(0.0f, -150.0f, 0.0f);
             glVertex3f(0.0f, 150.0f, 0.0f);
             
@@ -975,6 +973,7 @@ static void MouseActiveMotion(int i32X, int i32Y)
 //--
 int main(int argc, char** argv)
 {
+    //omp_set_num_threads(4);
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
     glutInitWindowSize(g_i32ScreenWidth, g_i32ScreenHeight);
