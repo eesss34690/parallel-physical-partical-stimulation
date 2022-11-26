@@ -76,6 +76,7 @@
 #include "UniformGrid.h"
 #include "HierarchicalGrid.h"
 #include "Octree.h"
+#include "Octree_omp.h"
 #include "LooseOctree.h"
 #include "Kdtree.h"
 #include <omp.h>
@@ -135,6 +136,7 @@ static int                                              g_i32MaxCollisions = 0;
 static int                                              g_i32CurrentRebuild = 0;
 static int                                              g_i32Pause = 0;
 static int                                              g_i32OneFrame = 0;
+static int                                              g_i32Speedup = 0;
 
 
 
@@ -260,7 +262,10 @@ static void CreateSpatialStructure()
             delete(g_pSpatialStruct);
             
             // [rad] Construct either an Octree or an Octree which is to be rebuilt every frame
-            g_pSpatialStruct = new SpatialTest::Octree(SpatialTest::Vector3(0.0f, 0.0f, 0.0f), 100.0f, g_i32CurrentRebuild);
+            if (g_i32Speedup == 0)
+                g_pSpatialStruct = new SpatialTest::Octree(SpatialTest::Vector3(0.0f, 0.0f, 0.0f), 100.0f, g_i32CurrentRebuild);
+            else if (g_i32Speedup == 1)
+                g_pSpatialStruct = new SpatialTest::Octree_omp(SpatialTest::Vector3(0.0f, 0.0f, 0.0f), 100.0f, g_i32CurrentRebuild);
             break;
                         
         case 6:
@@ -522,7 +527,6 @@ static void RenderInfo()
     ssSerial << "[Q] Quit    ";
     ssSerial << "[B] Enable / Disable Box    ";
     ssSerial << "[X] Enable / Disable Axis    ";
-    ssSerial << "[N] Show Collision Count    ";
     sBuf = ssSerial.str();
     PrintText(sBuf, 20, 70);
     
@@ -533,6 +537,8 @@ static void RenderInfo()
     ssSerial << "[P] Pause    ";
     ssSerial << "[Space] One Frame (Pause)    "; 
     ssSerial << "[R] Reposition    ";
+    ssSerial << "[O] OMP SpeedUp    ";
+    ssSerial << "[N] No SpeedUp    ";
     sBuf = ssSerial.str();
     PrintText(sBuf, 20, 90);
     
@@ -663,8 +669,26 @@ static void RenderInfo()
     ssSerial.str("");
     ssSerial << "Number of objects: " << g_i32ObjectCount;
     sBuf = ssSerial.str();
-    
     PrintText(sBuf, 20, 190);
+
+    // [rad] Print Speedup type
+    sBuf = "";
+    ssSerial.str("");
+    ssSerial << "Speed up type: ";
+    switch(g_i32Speedup)
+    {
+        case 1:
+            {
+                ssSerial << "OMP";
+            }
+            break;            
+            
+        default:
+            ssSerial << "Normal Case";
+    }
+    sBuf = ssSerial.str();
+    
+    PrintText(sBuf, 20, 210);
    
    
    
@@ -696,7 +720,7 @@ static void RenderInfo()
         ssSerial << "Number of collisions: " << (i32CollisionCount / 2);
         sBuf = ssSerial.str();
    
-        PrintText(sBuf, 20, 210);
+        PrintText(sBuf, 20, 230);
         
         
         sBuf = "";
@@ -705,12 +729,8 @@ static void RenderInfo()
         ssSerial << "Maximum number of collisions: " << (g_i32MaxCollisions / 2);
         sBuf = ssSerial.str();
    
-        PrintText(sBuf, 20, 230);
+        PrintText(sBuf, 20, 250);
     }
-   
-        
-   
-
 }
 
 
@@ -719,9 +739,6 @@ static void RenderScene()
 {
     // [rad] Do object update / collision detection
     Tick();
-
-    
-    
     glClear(GL_COLOR_BUFFER_BIT);
     
     // [rad] Render text
@@ -926,10 +943,6 @@ static void KeyboardNormal(unsigned char u8Key, int i32X, int i32Y)
     {
         exit(0);
     }
-    else if(u8Key == 'n' || u8Key == 'N')
-    {
-        g_i32ShowCollisionCount = !g_i32ShowCollisionCount;
-    }
     else if(u8Key == 'r' || u8Key == 'R')
     {
         ChangeSize(g_i32ScreenWidth, g_i32ScreenHeight);
@@ -937,6 +950,16 @@ static void KeyboardNormal(unsigned char u8Key, int i32X, int i32Y)
     else if(u8Key == 'p' || u8Key == 'P')
     {
         g_i32Pause = !g_i32Pause;
+    }
+    else if(u8Key == 'o' || u8Key == 'O')
+    {
+        g_i32Speedup = 1;
+        CreateSpatialStructure();
+    }
+    else if(u8Key == 'n' || u8Key == 'N')
+    {
+        g_i32Speedup = 0;
+        CreateSpatialStructure();
     }
     else if(u8Key == ' ')
     {

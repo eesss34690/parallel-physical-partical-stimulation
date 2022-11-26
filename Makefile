@@ -285,6 +285,33 @@ Octree.cpp.s:
 	$(MAKE) -f CMakeFiles/spatial-benchmark.dir/build.make CMakeFiles/spatial-benchmark.dir/Octree.cpp.s
 .PHONY : Octree.cpp.s
 
+Octree_omp.o: Octree_omp.cpp.o
+
+.PHONY : Octree_omp.o
+
+# target to build an object file
+Octree_omp.cpp.o:
+	$(MAKE) -f CMakeFiles/spatial-benchmark.dir/build.make CMakeFiles/spatial-benchmark.dir/Octree_omp.cpp.o
+.PHONY : Octree_omp.cpp.o
+
+Octree_omp.i: Octree_omp.cpp.i
+
+.PHONY : Octree_omp.i
+
+# target to preprocess a source file
+Octree_omp.cpp.i:
+	$(MAKE) -f CMakeFiles/spatial-benchmark.dir/build.make CMakeFiles/spatial-benchmark.dir/Octree_omp.cpp.i
+.PHONY : Octree_omp.cpp.i
+
+Octree_omp.s: Octree_omp.cpp.s
+
+.PHONY : Octree_omp.s
+
+# target to generate assembly for a file
+Octree_omp.cpp.s:
+	$(MAKE) -f CMakeFiles/spatial-benchmark.dir/build.make CMakeFiles/spatial-benchmark.dir/Octree_omp.cpp.s
+.PHONY : Octree_omp.cpp.s
+
 SortAndSweep.o: SortAndSweep.cpp.o
 
 .PHONY : SortAndSweep.o
@@ -393,6 +420,9 @@ help:
 	@echo "... Octree.o"
 	@echo "... Octree.i"
 	@echo "... Octree.s"
+	@echo "... Octree_omp.o"
+	@echo "... Octree_omp.i"
+	@echo "... Octree_omp.s"
 	@echo "... SortAndSweep.o"
 	@echo "... SortAndSweep.i"
 	@echo "... SortAndSweep.s"

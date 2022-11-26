@@ -24,6 +24,7 @@ set (sb_sources
     Kdtree.cpp
     LooseOctree.cpp
     Octree.cpp
+    Octree_omp.cpp
     SortAndSweep.cpp
     SphereObject.cpp
     UniformGrid.cpp
@@ -40,6 +41,7 @@ set (sb_headers
     Kdtree.h
     LooseOctree.h
     Octree.h
+    Octree_omp.h
     SortAndSweep.h
     SphereObject.h
     UniformGrid.h
