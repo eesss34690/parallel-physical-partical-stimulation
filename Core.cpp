@@ -66,6 +66,8 @@
 #include <string>
 #include <sstream>
 #include <cstdlib>
+#include <omp.h>
+#include <pthread.h>
 
 #include "ISpatialStructure.h"
 #include "ISpatialObject.h"
@@ -78,11 +80,11 @@
 #include "Octree.h"
 #include "Octree_omp.h"
 #include "LooseOctree.h"
+#include "LooseOctree_omp.h"
 #include "Kdtree.h"
-#include <omp.h>
 #include "Vector3.h"
 
-
+#define THREAD_CNT 8
 
 //--
 static SpatialTest::ISpatialStructure*                  g_pSpatialStruct = NULL;
@@ -137,6 +139,8 @@ static int                                              g_i32CurrentRebuild = 0;
 static int                                              g_i32Pause = 0;
 static int                                              g_i32OneFrame = 0;
 static int                                              g_i32Speedup = 0;
+static int                                              g_i32PThreadSize;
+pthread_t                                               t[THREAD_CNT];
 
 
 
@@ -265,14 +269,33 @@ static void CreateSpatialStructure()
             if (g_i32Speedup == 0)
                 g_pSpatialStruct = new SpatialTest::Octree(SpatialTest::Vector3(0.0f, 0.0f, 0.0f), 100.0f, g_i32CurrentRebuild);
             else if (g_i32Speedup == 1)
+            {
+                omp_set_num_threads(8);
                 g_pSpatialStruct = new SpatialTest::Octree_omp(SpatialTest::Vector3(0.0f, 0.0f, 0.0f), 100.0f, g_i32CurrentRebuild);
+            }
+            else if (g_i32Speedup == 2)
+            {
+                g_i32PThreadSize = g_i32ObjectCount / THREAD_CNT;
+                g_pSpatialStruct = new SpatialTest::Octree(SpatialTest::Vector3(0.0f, 0.0f, 0.0f), 100.0f, g_i32CurrentRebuild);
+            }
             break;
                         
         case 6:
             delete(g_pSpatialStruct);
             
             // [rad] Construct either a Loose Octree or a Loose Octree which is to be rebuilt every frame
-            g_pSpatialStruct = new SpatialTest::LooseOctree(SpatialTest::Vector3(0.0f, 0.0f, 0.0f), 100.0f, g_i32CurrentRebuild);
+            if (g_i32Speedup == 0)
+                g_pSpatialStruct = new SpatialTest::LooseOctree(SpatialTest::Vector3(0.0f, 0.0f, 0.0f), 100.0f, g_i32CurrentRebuild);
+            else if (g_i32Speedup == 1)
+            {
+                omp_set_num_threads(8);
+                g_pSpatialStruct = new SpatialTest::LooseOctree_omp(SpatialTest::Vector3(0.0f, 0.0f, 0.0f), 100.0f, g_i32CurrentRebuild);
+            }
+            else if (g_i32Speedup == 2)
+            {
+                g_i32PThreadSize = g_i32ObjectCount / THREAD_CNT;
+                g_pSpatialStruct = new SpatialTest::LooseOctree_omp(SpatialTest::Vector3(0.0f, 0.0f, 0.0f), 100.0f, g_i32CurrentRebuild);
+            }
             break;
             
             
@@ -308,7 +331,124 @@ static void DeleteSpatialStructure()
     g_pSpatialStruct = NULL;
 }
 
+static inline void * calc(void *arg)
+{
+    float f32Radius;
+    int i32Collision;
+    
+    SpatialTest::Vector3 vec3Position;
+    SpatialTest::Vector3 vec3Direction;
+    SpatialTest::Vector3 vec3Normal;
+    std::vector<SpatialTest::ISpatialObject*>::iterator iter_objects;
 
+    std::vector<SpatialTest::ISpatialObject*>::iterator ending = (*((int*)(&arg)) == THREAD_CNT - 1)? g_vecObjects.end() : g_vecObjects.begin() + *((int*)(&arg)) + g_i32PThreadSize;
+
+    for(iter_objects = g_vecObjects.begin() + *((int*)(&arg)); iter_objects != ending; iter_objects++)
+    {
+        // [rad] Reset collision info
+        (*iter_objects)->VCollisionOff();
+        
+        
+        // [rad] Check wall collisions
+        vec3Position = (*iter_objects)->VGetPosition();
+        vec3Direction = (*iter_objects)->VGetDirection();
+        f32Radius = (*iter_objects)->VGetRadius();
+            
+        i32Collision = 0;
+        
+        // [rad] Check if we are close enough to the wall
+            
+        if(vec3Position.x - f32Radius <= g_vec3ValuesMin.x)
+        {
+            // [rad] Left wall
+            vec3Normal = SpatialTest::Vector3(1.0f, 0.0f, 0.0f);
+                
+            vec3Direction -= 2.0f * vec3Normal * vec3Direction.Dot(vec3Normal); 
+            (*iter_objects)->VSetDirection(vec3Direction);
+                
+            i32Collision = 1;
+        }
+            
+        if(vec3Position.x + f32Radius >= g_vec3ValuesMax.x)
+        {
+            // [rad] Right wall
+            vec3Normal = SpatialTest::Vector3(-1.0f, 0.0f, 0.0f);
+                
+            vec3Direction -= 2.0f * vec3Normal * vec3Direction.Dot(vec3Normal); 
+            (*iter_objects)->VSetDirection(vec3Direction);
+                
+            i32Collision = 1;
+        }
+            
+        if(vec3Position.z - f32Radius <= g_vec3ValuesMin.z)
+        {
+            // [rad] Far wall
+            vec3Normal = SpatialTest::Vector3(0.0f, 0.0f, 1.0f);
+                
+            vec3Direction -= 2.0f * vec3Normal * vec3Direction.Dot(vec3Normal); 
+            (*iter_objects)->VSetDirection(vec3Direction);
+                
+            i32Collision = 1;
+        }
+            
+        if(vec3Position.z + f32Radius >= g_vec3ValuesMax.z)
+        {
+            // [rad] Near wall
+            vec3Normal = SpatialTest::Vector3(0.0f, 0.0f, -1.0f);
+        
+            vec3Direction -= 2.0f * vec3Normal * vec3Direction.Dot(vec3Normal); 
+            (*iter_objects)->VSetDirection(vec3Direction);
+                
+            i32Collision = 1;
+        }
+            
+        if(vec3Position.y - f32Radius <= g_vec3ValuesMin.y)
+        {
+            // [rad] Bottom wall
+            vec3Normal = SpatialTest::Vector3(0.0f, 1.0f, 0.0f);
+                
+            vec3Direction -= 2.0f * vec3Normal * vec3Direction.Dot(vec3Normal); 
+            (*iter_objects)->VSetDirection(vec3Direction);
+                
+            i32Collision = 1;
+        }
+            
+        if(vec3Position.y + f32Radius >= g_vec3ValuesMax.y)
+        {
+            // [rad] Top wall
+            vec3Normal = SpatialTest::Vector3(0.0f, -1.0f, 0.0f);
+                
+            vec3Direction -= 2.0f * vec3Normal * vec3Direction.Dot(vec3Normal); 
+            (*iter_objects)->VSetDirection(vec3Direction);
+                
+            i32Collision = 1;
+        }
+            
+        if(!i32Collision)
+        {
+            // [rad] Nothing special
+            vec3Normal = SpatialTest::Vector3(0.0f, 0.0f, 0.0f);
+                
+            vec3Direction -= 2.0f * vec3Normal * vec3Direction.Dot(vec3Normal); 
+            (*iter_objects)->VSetDirection(vec3Direction);
+
+        }
+            
+            
+            
+        // [rad] Update position
+        vec3Position += vec3Direction * g_f32Frame;
+        (*iter_objects)->VSetPosition(vec3Position);
+                
+                
+        // [rad] Check if this was one frame processing
+        if(g_i32OneFrame)
+        {
+            g_i32Pause = 1;
+            g_i32OneFrame = 0;
+        }
+    }
+}
 
 //--
 static void Tick()
@@ -334,112 +474,227 @@ static void Tick()
         // [rad] For each object, check wall collisions
         
         std::vector<SpatialTest::ISpatialObject*>::iterator iter_objects;
-        for(iter_objects = g_vecObjects.begin(); iter_objects != g_vecObjects.end(); iter_objects++)
-        {
-            // [rad] Reset collision info
-            (*iter_objects)->VCollisionOff();
-    
-    
-            // [rad] Check wall collisions
-            vec3Position = (*iter_objects)->VGetPosition();
-            vec3Direction = (*iter_objects)->VGetDirection();
-            f32Radius = (*iter_objects)->VGetRadius();
         
-            i32Collision = 0;
-        
-            // [rad] Check if we are close enough to the wall
-        
-            if(vec3Position.x - f32Radius <= g_vec3ValuesMin.x)
+        if (g_i32Speedup == 1) {
+            #pragma omp parallel for
+            for(iter_objects = g_vecObjects.begin(); iter_objects != g_vecObjects.end(); iter_objects++)
             {
-                // [rad] Left wall
-                vec3Normal = SpatialTest::Vector3(1.0f, 0.0f, 0.0f);
-            
-                vec3Direction -= 2.0f * vec3Normal * vec3Direction.Dot(vec3Normal); 
-                (*iter_objects)->VSetDirection(vec3Direction);
-            
-                i32Collision = 1;
-            }
+                // [rad] Reset collision info
+                (*iter_objects)->VCollisionOff();
         
-            if(vec3Position.x + f32Radius >= g_vec3ValuesMax.x)
-            {
-                // [rad] Right wall
-                vec3Normal = SpatialTest::Vector3(-1.0f, 0.0f, 0.0f);
-            
-                vec3Direction -= 2.0f * vec3Normal * vec3Direction.Dot(vec3Normal); 
-                (*iter_objects)->VSetDirection(vec3Direction);
-            
-                i32Collision = 1;
-            }
         
-            if(vec3Position.z - f32Radius <= g_vec3ValuesMin.z)
-            {
-                // [rad] Far wall
-                vec3Normal = SpatialTest::Vector3(0.0f, 0.0f, 1.0f);
+                // [rad] Check wall collisions
+                vec3Position = (*iter_objects)->VGetPosition();
+                vec3Direction = (*iter_objects)->VGetDirection();
+                f32Radius = (*iter_objects)->VGetRadius();
             
-                vec3Direction -= 2.0f * vec3Normal * vec3Direction.Dot(vec3Normal); 
-                (*iter_objects)->VSetDirection(vec3Direction);
+                i32Collision = 0;
             
-                i32Collision = 1;
-            }
-        
-            if(vec3Position.z + f32Radius >= g_vec3ValuesMax.z)
-            {
-                // [rad] Near wall
-                vec3Normal = SpatialTest::Vector3(0.0f, 0.0f, -1.0f);
+                // [rad] Check if we are close enough to the wall
             
-                vec3Direction -= 2.0f * vec3Normal * vec3Direction.Dot(vec3Normal); 
-                (*iter_objects)->VSetDirection(vec3Direction);
+                if(vec3Position.x - f32Radius <= g_vec3ValuesMin.x)
+                {
+                    // [rad] Left wall
+                    vec3Normal = SpatialTest::Vector3(1.0f, 0.0f, 0.0f);
+                
+                    vec3Direction -= 2.0f * vec3Normal * vec3Direction.Dot(vec3Normal); 
+                    (*iter_objects)->VSetDirection(vec3Direction);
+                
+                    i32Collision = 1;
+                }
             
-                i32Collision = 1;
-            }
-        
-            if(vec3Position.y - f32Radius <= g_vec3ValuesMin.y)
-            {
-                // [rad] Bottom wall
-                vec3Normal = SpatialTest::Vector3(0.0f, 1.0f, 0.0f);
+                if(vec3Position.x + f32Radius >= g_vec3ValuesMax.x)
+                {
+                    // [rad] Right wall
+                    vec3Normal = SpatialTest::Vector3(-1.0f, 0.0f, 0.0f);
+                
+                    vec3Direction -= 2.0f * vec3Normal * vec3Direction.Dot(vec3Normal); 
+                    (*iter_objects)->VSetDirection(vec3Direction);
+                
+                    i32Collision = 1;
+                }
             
-                vec3Direction -= 2.0f * vec3Normal * vec3Direction.Dot(vec3Normal); 
-                (*iter_objects)->VSetDirection(vec3Direction);
+                if(vec3Position.z - f32Radius <= g_vec3ValuesMin.z)
+                {
+                    // [rad] Far wall
+                    vec3Normal = SpatialTest::Vector3(0.0f, 0.0f, 1.0f);
+                
+                    vec3Direction -= 2.0f * vec3Normal * vec3Direction.Dot(vec3Normal); 
+                    (*iter_objects)->VSetDirection(vec3Direction);
+                
+                    i32Collision = 1;
+                }
             
-                i32Collision = 1;
-            }
-        
-            if(vec3Position.y + f32Radius >= g_vec3ValuesMax.y)
-            {
-                // [rad] Top wall
-                vec3Normal = SpatialTest::Vector3(0.0f, -1.0f, 0.0f);
+                if(vec3Position.z + f32Radius >= g_vec3ValuesMax.z)
+                {
+                    // [rad] Near wall
+                    vec3Normal = SpatialTest::Vector3(0.0f, 0.0f, -1.0f);
+                
+                    vec3Direction -= 2.0f * vec3Normal * vec3Direction.Dot(vec3Normal); 
+                    (*iter_objects)->VSetDirection(vec3Direction);
+                
+                    i32Collision = 1;
+                }
             
-                vec3Direction -= 2.0f * vec3Normal * vec3Direction.Dot(vec3Normal); 
-                (*iter_objects)->VSetDirection(vec3Direction);
+                if(vec3Position.y - f32Radius <= g_vec3ValuesMin.y)
+                {
+                    // [rad] Bottom wall
+                    vec3Normal = SpatialTest::Vector3(0.0f, 1.0f, 0.0f);
+                
+                    vec3Direction -= 2.0f * vec3Normal * vec3Direction.Dot(vec3Normal); 
+                    (*iter_objects)->VSetDirection(vec3Direction);
+                
+                    i32Collision = 1;
+                }
             
-                i32Collision = 1;
-            }
-        
-            if(!i32Collision)
-            {
-                // [rad] Nothing special
-                vec3Normal = SpatialTest::Vector3(0.0f, 0.0f, 0.0f);
+                if(vec3Position.y + f32Radius >= g_vec3ValuesMax.y)
+                {
+                    // [rad] Top wall
+                    vec3Normal = SpatialTest::Vector3(0.0f, -1.0f, 0.0f);
+                
+                    vec3Direction -= 2.0f * vec3Normal * vec3Direction.Dot(vec3Normal); 
+                    (*iter_objects)->VSetDirection(vec3Direction);
+                
+                    i32Collision = 1;
+                }
             
-                vec3Direction -= 2.0f * vec3Normal * vec3Direction.Dot(vec3Normal); 
-                (*iter_objects)->VSetDirection(vec3Direction);
+                if(!i32Collision)
+                {
+                    // [rad] Nothing special
+                    vec3Normal = SpatialTest::Vector3(0.0f, 0.0f, 0.0f);
+                
+                    vec3Direction -= 2.0f * vec3Normal * vec3Direction.Dot(vec3Normal); 
+                    (*iter_objects)->VSetDirection(vec3Direction);
 
+                }
+            
+            
+            
+                // [rad] Update position
+                vec3Position += vec3Direction * g_f32Frame;
+                (*iter_objects)->VSetPosition(vec3Position);
+                
+                
+                // [rad] Check if this was one frame processing
+                if(g_i32OneFrame)
+                {
+                    g_i32Pause = 1;
+                    g_i32OneFrame = 0;
+                }
             }
-        
-        
-        
-            // [rad] Update position
-            vec3Position += vec3Direction * g_f32Frame;
-            (*iter_objects)->VSetPosition(vec3Position);
-            
-            
-            // [rad] Check if this was one frame processing
-            if(g_i32OneFrame)
+        } else if (g_i32Speedup == 0){
+            for(iter_objects = g_vecObjects.begin(); iter_objects != g_vecObjects.end(); iter_objects++)
             {
-                g_i32Pause = 1;
-                g_i32OneFrame = 0;
+                // [rad] Reset collision info
+                (*iter_objects)->VCollisionOff();
+        
+        
+                // [rad] Check wall collisions
+                vec3Position = (*iter_objects)->VGetPosition();
+                vec3Direction = (*iter_objects)->VGetDirection();
+                f32Radius = (*iter_objects)->VGetRadius();
+            
+                i32Collision = 0;
+            
+                // [rad] Check if we are close enough to the wall
+            
+                if(vec3Position.x - f32Radius <= g_vec3ValuesMin.x)
+                {
+                    // [rad] Left wall
+                    vec3Normal = SpatialTest::Vector3(1.0f, 0.0f, 0.0f);
+                
+                    vec3Direction -= 2.0f * vec3Normal * vec3Direction.Dot(vec3Normal); 
+                    (*iter_objects)->VSetDirection(vec3Direction);
+                
+                    i32Collision = 1;
+                }
+            
+                if(vec3Position.x + f32Radius >= g_vec3ValuesMax.x)
+                {
+                    // [rad] Right wall
+                    vec3Normal = SpatialTest::Vector3(-1.0f, 0.0f, 0.0f);
+                
+                    vec3Direction -= 2.0f * vec3Normal * vec3Direction.Dot(vec3Normal); 
+                    (*iter_objects)->VSetDirection(vec3Direction);
+                
+                    i32Collision = 1;
+                }
+            
+                if(vec3Position.z - f32Radius <= g_vec3ValuesMin.z)
+                {
+                    // [rad] Far wall
+                    vec3Normal = SpatialTest::Vector3(0.0f, 0.0f, 1.0f);
+                
+                    vec3Direction -= 2.0f * vec3Normal * vec3Direction.Dot(vec3Normal); 
+                    (*iter_objects)->VSetDirection(vec3Direction);
+                
+                    i32Collision = 1;
+                }
+            
+                if(vec3Position.z + f32Radius >= g_vec3ValuesMax.z)
+                {
+                    // [rad] Near wall
+                    vec3Normal = SpatialTest::Vector3(0.0f, 0.0f, -1.0f);
+                
+                    vec3Direction -= 2.0f * vec3Normal * vec3Direction.Dot(vec3Normal); 
+                    (*iter_objects)->VSetDirection(vec3Direction);
+                
+                    i32Collision = 1;
+                }
+            
+                if(vec3Position.y - f32Radius <= g_vec3ValuesMin.y)
+                {
+                    // [rad] Bottom wall
+                    vec3Normal = SpatialTest::Vector3(0.0f, 1.0f, 0.0f);
+                
+                    vec3Direction -= 2.0f * vec3Normal * vec3Direction.Dot(vec3Normal); 
+                    (*iter_objects)->VSetDirection(vec3Direction);
+                
+                    i32Collision = 1;
+                }
+            
+                if(vec3Position.y + f32Radius >= g_vec3ValuesMax.y)
+                {
+                    // [rad] Top wall
+                    vec3Normal = SpatialTest::Vector3(0.0f, -1.0f, 0.0f);
+                
+                    vec3Direction -= 2.0f * vec3Normal * vec3Direction.Dot(vec3Normal); 
+                    (*iter_objects)->VSetDirection(vec3Direction);
+                
+                    i32Collision = 1;
+                }
+            
+                if(!i32Collision)
+                {
+                    // [rad] Nothing special
+                    vec3Normal = SpatialTest::Vector3(0.0f, 0.0f, 0.0f);
+                
+                    vec3Direction -= 2.0f * vec3Normal * vec3Direction.Dot(vec3Normal); 
+                    (*iter_objects)->VSetDirection(vec3Direction);
+
+                }
+            
+            
+            
+                // [rad] Update position
+                vec3Position += vec3Direction * g_f32Frame;
+                (*iter_objects)->VSetPosition(vec3Position);
+                
+                
+                // [rad] Check if this was one frame processing
+                if(g_i32OneFrame)
+                {
+                    g_i32Pause = 1;
+                    g_i32OneFrame = 0;
+                }
+            }
+        } else if (g_i32Speedup == 2) {
+            for( int i = 0; i < THREAD_CNT; i++)
+                pthread_create(&t[i], NULL, calc, (void*)(i * g_i32PThreadSize));
+            for( int i = 0; i < THREAD_CNT; i++){
+                pthread_join(t[i], NULL);
             }
         }
-    
     
         // [rad] Do collision detection
         g_pSpatialStruct->VUpdate();
@@ -527,6 +782,7 @@ static void RenderInfo()
     ssSerial << "[Q] Quit    ";
     ssSerial << "[B] Enable / Disable Box    ";
     ssSerial << "[X] Enable / Disable Axis    ";
+    ssSerial << "[Space] One Frame (Pause)    "; 
     sBuf = ssSerial.str();
     PrintText(sBuf, 20, 70);
     
@@ -534,11 +790,10 @@ static void RenderInfo()
     // [rad] Lower menu (2nd)
     sBuf = "";
     ssSerial.str("");
-    ssSerial << "[P] Pause    ";
-    ssSerial << "[Space] One Frame (Pause)    "; 
     ssSerial << "[R] Reposition    ";
     ssSerial << "[O] OMP SpeedUp    ";
     ssSerial << "[N] No SpeedUp    ";
+    ssSerial << "[P] PThread SpeedUp    ";
     sBuf = ssSerial.str();
     PrintText(sBuf, 20, 90);
     
@@ -678,10 +933,11 @@ static void RenderInfo()
     switch(g_i32Speedup)
     {
         case 1:
-            {
                 ssSerial << "OMP";
-            }
-            break;            
+            break;    
+        case 2:
+                ssSerial << "PThread";
+            break;
             
         default:
             ssSerial << "Normal Case";
@@ -755,6 +1011,8 @@ static void RenderScene()
     
     // [rad] Render all objects
     std::vector<SpatialTest::ISpatialObject*>::iterator iter_objects;
+    //if (g_i32Speedup == 1)
+    //    #pragma omp parallel for
     for(iter_objects = g_vecObjects.begin(); iter_objects != g_vecObjects.end(); iter_objects++)
     {
         glPushMatrix();
@@ -949,7 +1207,8 @@ static void KeyboardNormal(unsigned char u8Key, int i32X, int i32Y)
     }
     else if(u8Key == 'p' || u8Key == 'P')
     {
-        g_i32Pause = !g_i32Pause;
+        g_i32Speedup = 2;
+        CreateSpatialStructure();
     }
     else if(u8Key == 'o' || u8Key == 'O')
     {
@@ -996,7 +1255,7 @@ static void MouseActiveMotion(int i32X, int i32Y)
 //--
 int main(int argc, char** argv)
 {
-    //omp_set_num_threads(4);
+    omp_set_dynamic(0);
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
     glutInitWindowSize(g_i32ScreenWidth, g_i32ScreenHeight);

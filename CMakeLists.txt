@@ -23,6 +23,7 @@ set (sb_sources
     HierarchicalGrid.cpp
     Kdtree.cpp
     LooseOctree.cpp
+    LooseOctree_omp.cpp
     Octree.cpp
     Octree_omp.cpp
     SortAndSweep.cpp
@@ -40,6 +41,7 @@ set (sb_headers
     ISpatialStructure.h
     Kdtree.h
     LooseOctree.h
+    LooseOctree_omp.h
     Octree.h
     Octree_omp.h
     SortAndSweep.h
@@ -49,6 +51,10 @@ set (sb_headers
 )
 
 add_executable (spatial-benchmark ${sb_sources} ${sb_headers})
+
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+target_link_libraries(spatial-benchmark Threads::Threads)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES Darwin)
     target_link_libraries (spatial-benchmark "-framework OpenGL -framework GLUT -framework ApplicationServices")

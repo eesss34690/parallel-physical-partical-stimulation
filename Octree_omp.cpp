@@ -130,7 +130,6 @@ namespace SpatialTest
                 {
                     // [rad] traverse list and remove
                     pObject = pNode->m_pObjects;
-                    #pragma omp parallel
                     while(pObject)
                     {
                         pPrev = pObject;
@@ -164,7 +163,6 @@ namespace SpatialTest
                     pNode = pNode->m_pParent;
                 
                     // [rad] Check if this node still contains this object
-                    #pragma omp parallel
                     while(pNode)
                     {
                         // [rad] Check if contains
