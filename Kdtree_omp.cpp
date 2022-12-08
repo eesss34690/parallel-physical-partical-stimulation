@@ -210,7 +210,7 @@ namespace SpatialTest
 
 
     //--
-    KDTreeNode_omp::KDTreeNode_omp(KDTreeNode* pParent, int i32SplitPane) :
+    KDTreeNode_omp::KDTreeNode_omp(KDTreeNode_omp* pParent, int i32SplitPane) :
         m_pParent(pParent),
         m_pChildLeft(NULL),
         m_pChildRight(NULL),

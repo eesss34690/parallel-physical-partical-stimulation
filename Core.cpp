@@ -78,6 +78,7 @@
 #include "SortAndSweep.h"
 #include "SortAndSweep_omp.h"
 #include "UniformGrid.h"
+#include "UniformGrid_omp.h"
 #include "HierarchicalGrid.h"
 #include "HierarchicalGrid_omp.h"
 #include "Octree.h"
@@ -85,6 +86,7 @@
 #include "LooseOctree.h"
 #include "LooseOctree_omp.h"
 #include "Kdtree.h"
+#include "Kdtree_omp.h"
 #include "Vector3.h"
 
 #define THREAD_CNT 8
@@ -107,8 +109,8 @@ static int                                              g_i32LastId = 0;
 static float                                            g_f32StartOffset = 50.0f;
 
 // [rad] Bounding box for all objects
-static SpatialTest::Vector3                             g_vec3ValuesMax = SpatialTest::Vector3(150.0f, 150.0f, 150.0f);
-static SpatialTest::Vector3                             g_vec3ValuesMin = SpatialTest::Vector3(-150.0f, -150.0f, -150.0f);
+static SpatialTest::Vector3                             g_vec3ValuesMax = SpatialTest::Vector3(100.0f, 100.0f, 100.0f);
+static SpatialTest::Vector3                             g_vec3ValuesMin = SpatialTest::Vector3(-100.0f, -100.0f, -100.0f);
 
 // [rad] Number of hash buckets to use in Uniform grid and Hierarchical grid
 static int                                              g_i32HashBucketCount = 2048;
@@ -275,7 +277,16 @@ static void CreateSpatialStructure()
             
         case 3:
             delete(g_pSpatialStruct);
-            g_pSpatialStruct = new SpatialTest::UniformGrid(g_i32HashBucketCount);
+            if (g_i32Speedup == 0)
+                g_pSpatialStruct = new SpatialTest::UniformGrid(g_i32HashBucketCount);
+            else if (g_i32Speedup == 1) {
+            	omp_set_num_threads(8);
+                g_pSpatialStruct = new SpatialTest::UniformGrid_omp(g_i32HashBucketCount);
+            } // else if
+            else if (g_i32Speedup == 2) {
+                g_i32PThreadSize = g_i32ObjectCount / THREAD_CNT;
+                g_pSpatialStruct = new SpatialTest::UniformGrid(g_i32HashBucketCount);
+            } // else if
             break;
             
         case 4:
@@ -332,7 +343,15 @@ static void CreateSpatialStructure()
             
         case 7:
             delete(g_pSpatialStruct);
-            g_pSpatialStruct = new SpatialTest::KDTree(SpatialTest::Vector3(0.0f, 0.0f, 0.0f), 100.0f);
+            if (g_i32Speedup == 0)
+                g_pSpatialStruct = new SpatialTest::KDTree(SpatialTest::Vector3(0.0f, 0.0f, 0.0f), 100.0f);
+            else if (g_i32Speedup == 1) {
+                g_pSpatialStruct = new SpatialTest::KDTree_omp(SpatialTest::Vector3(0.0f, 0.0f, 0.0f), 100.0f);
+            } // esle if
+            else if (g_i32Speedup == 2) {
+                g_i32PThreadSize = g_i32ObjectCount / THREAD_CNT;
+                g_pSpatialStruct = new SpatialTest::KDTree_omp(SpatialTest::Vector3(0.0f, 0.0f, 0.0f), 100.0f);
+            } // esle if
             break;
           
           
@@ -785,10 +804,10 @@ static void RenderInfo()
     // [rad] Upper menu
     sBuf = "";
     ssSerial.str("");
-    ssSerial << "[1] Brute Force / Brute Force (Rebuild)    ";
-    ssSerial << "[2] Sort and Sweep / Sort and Sweep (Rebuild)    ";
+    ssSerial << "[1] Brute Force / Brute Force   ";
+    ssSerial << "[2] Sort and Sweep / Sort and Sweep    ";
     ssSerial << "[3] Uniform Grid    ";
-    ssSerial << "[4] Hierarchical Grid / Hierarchical Grid (Rebuild)    ";
+    ssSerial << "[4] Hierarchical Grid / Hierarchical Grid    ";
     ssSerial << "[5] Octree / Octree (Rebuild)   ";
     
     sBuf = ssSerial.str();

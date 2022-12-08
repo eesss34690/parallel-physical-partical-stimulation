@@ -24,6 +24,7 @@ set (sb_sources
     HierarchicalGrid.cpp
     HierarchicalGrid_omp.cpp
     Kdtree.cpp
+    Kdtree_omp.cpp
     LooseOctree.cpp
     LooseOctree_omp.cpp
     Octree.cpp
@@ -32,6 +33,7 @@ set (sb_sources
     SortAndSweep_omp.cpp
     SphereObject.cpp
     UniformGrid.cpp
+    UniformGrid_omp.cpp
     Core.cpp
 )
 
@@ -45,6 +47,7 @@ set (sb_headers
     ISpatialObject.h
     ISpatialStructure.h
     Kdtree.h
+    Kdtree_omp.h
     LooseOctree.h
     LooseOctree_omp.h
     Octree.h
@@ -53,6 +56,7 @@ set (sb_headers
     SortAndSweep_omp.h
     SphereObject.h
     UniformGrid.h
+    UniformGrid_omp.h
     Vector3.h
 )
 
