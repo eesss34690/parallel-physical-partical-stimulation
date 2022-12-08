@@ -88,16 +88,14 @@ namespace SpatialTest
     void
     SortAndSweep_omp::VAddObjects(const std::vector<ISpatialObject*>& refObjects)
     {
-#pragma omp parallel
-{
-        #pragma omp for
+
         // [rad] Copy elements into the local vector
         std::vector<ISpatialObject*>::const_iterator iter_object;
         for(iter_object = refObjects.begin(); iter_object != refObjects.end(); iter_object++)
         {
             m_vecObjects.push_back(*iter_object);
         }
-}
+
     }
     
     
