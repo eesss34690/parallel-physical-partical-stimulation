@@ -88,13 +88,16 @@ namespace SpatialTest
     void
     SortAndSweep_omp::VAddObjects(const std::vector<ISpatialObject*>& refObjects)
     {
-        #pragma parallel omp for
+#pragma omp parallel
+{
+        #pragma omp for
         // [rad] Copy elements into the local vector
         std::vector<ISpatialObject*>::const_iterator iter_object;
         for(iter_object = refObjects.begin(); iter_object != refObjects.end(); iter_object++)
         {
             m_vecObjects.push_back(*iter_object);
         }
+}
     }
     
     
@@ -102,6 +105,8 @@ namespace SpatialTest
     void
     SortAndSweep_omp::VUpdate()
     {
+#pragma omp parallel
+{
         int i32Index;
         int i32Break;
         
@@ -145,7 +150,7 @@ namespace SpatialTest
         }
         
         
-        #pragma parallel omp for
+        #pragma omp for
         // [rad] Now iterate through objects
         for(iter_object1 = m_vecObjects.begin(); iter_object1 != m_vecObjects.end(); iter_object1++)
         {
@@ -228,7 +233,7 @@ namespace SpatialTest
             
         }
         
-        #pragma parallel omp for
+        #pragma omp for
         // [rad] Compute variance
         for(i32Index = 0; i32Index < 3; i32Index++)
         {
@@ -249,4 +254,5 @@ namespace SpatialTest
             m_i32SortAxis = 2;
         }
     }
+}
 }

@@ -55,13 +55,16 @@ namespace SpatialTest
     void
     BruteForce_omp::VAddObjects(const std::vector<ISpatialObject*>& refObjects)
     {
+#pragma omp parallel
+{
         // [rad] Copy elements into the local vector
         std::vector<ISpatialObject*>::const_iterator iter_object;
-        #pragma parallel omp for
+        #pragma omp for
         for(iter_object = refObjects.begin(); iter_object != refObjects.end(); iter_object++)
         {
             m_vecObjects.push_back(*iter_object);
         }
+}
     }
     
     
@@ -69,9 +72,12 @@ namespace SpatialTest
     void
     BruteForce_omp::VUpdate()
     {        
+#pragma omp parallel
+{
         std::vector<ISpatialObject*>::iterator iter_object1;
         std::vector<ISpatialObject*>::iterator iter_object2;
-        #pragma parallel omp for
+
+        #pragma omp for schedule(dynamic, 64)
         for(iter_object1 = m_vecObjects.begin(); iter_object1 != m_vecObjects.end(); iter_object1++)
         {
             for(iter_object2 = m_vecObjects.begin(); iter_object2 != m_vecObjects.end(); iter_object2++)
@@ -91,6 +97,7 @@ namespace SpatialTest
                 }
             }
         }
+}
     }        
 
     

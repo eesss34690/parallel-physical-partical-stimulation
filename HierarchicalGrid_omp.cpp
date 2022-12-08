@@ -90,9 +90,11 @@ namespace SpatialTest
         m_i32HashBuckets(i32HashBuckets),
         m_i32Layers(1)
     {
+#pragma omp parallel
+{
         HierarchicalGridHashBucket_omp* pBucket;
         
-        #pragma parallel omp for
+        #pragma omp for schedule(dynamic, 64)
         // [rad] Initialize hashing buckets
         for(int i32Index = 0; i32Index < m_i32HashBuckets; i32Index++)
         {
@@ -106,6 +108,7 @@ namespace SpatialTest
         
         m_f32CellSizeMin = std::numeric_limits<float>::max();
         m_f32CellSizeMax = std::numeric_limits<float>::min();
+}
     }
     
     
@@ -113,11 +116,13 @@ namespace SpatialTest
     //--
     HierarchicalGrid_omp::~HierarchicalGrid_omp()
     {
+#pragma omp parallel
+{
         HierarchicalGridHashBucket_omp* pBucket;
         
         // [rad] Delete all buckets
         std::vector<HierarchicalGridHashBucket_omp*>::iterator iter_bucket;
-        #pragma parallel omp for
+        #pragma omp for schedule(dynamic, 64)
         for(iter_bucket = m_vecHashBuckets.begin(); iter_bucket != m_vecHashBuckets.end(); iter_bucket++)
         {
             pBucket = (*iter_bucket);
@@ -125,6 +130,7 @@ namespace SpatialTest
             delete(pBucket);
             pBucket = NULL;
         }
+}
     }
     
     
@@ -133,6 +139,8 @@ namespace SpatialTest
     void
     HierarchicalGrid_omp::VAddObjects(const std::vector<ISpatialObject*>& refObjects)
     {
+//#pragma omp parallel
+//{
         int i32Hash;
         float f32Diameter;
         
@@ -141,7 +149,7 @@ namespace SpatialTest
         // [rad] Iterate through all objects, and find smallest and biggest diameters
         std::vector<ISpatialObject*>::const_iterator iter_object;
         
-        #pragma parallel omp for
+        //#pragma omp for
         for(iter_object = refObjects.begin(); iter_object != refObjects.end(); iter_object++)
         {
             pObject = (*iter_object);
@@ -192,12 +200,13 @@ namespace SpatialTest
     
         
         
-        #pragma parallel omp for
+        //#pragma omp for
         // [rad] Add each object into the hierarchical grid
         for(iter_object = refObjects.begin(); iter_object != refObjects.end(); iter_object++)
         {
             AddObject(*iter_object);
         }
+//}
     }
     
     
@@ -206,6 +215,8 @@ namespace SpatialTest
     void
     HierarchicalGrid_omp::VUpdate()
     {   
+#pragma omp parallel
+{
         int i32Level;
         int i32Hash;
         
@@ -221,7 +232,7 @@ namespace SpatialTest
         int i32Z1, i32Z2;
         
         std::vector<ISpatialObject*>::iterator iter_object;
-        #pragma parallel omp for
+        #pragma omp for schedule(dynamic, 64)
         for(iter_object = m_vecObjects.begin(); iter_object != m_vecObjects.end(); iter_object++)
         {
             pObject = (*iter_object);
@@ -315,7 +326,7 @@ namespace SpatialTest
             
         }
 
-    
+}
     }
 
 
@@ -324,11 +335,11 @@ namespace SpatialTest
     void
     HierarchicalGrid_omp::AddObject(ISpatialObject* pObject)
     {
+
         int i32Level;
         float f32Diameter = pObject->VGetRadius() * 2.0f;
         float f32Size = m_f32CellSizeMin;    
             
-        #pragma parallel omp for
         // [rad] Find the lowest layer where object fully fits and insert it
         // there
         for(i32Level = 0; f32Size / s_f32ObjectCellRatio < f32Diameter; i32Level++)
@@ -356,7 +367,7 @@ namespace SpatialTest
             
         // [rad] Increment count for this level
         m_vecLayerCounts[i32Level]++;
-        
+
     }
         
             
