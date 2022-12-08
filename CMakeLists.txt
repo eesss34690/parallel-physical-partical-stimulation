@@ -1,4 +1,4 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 2.8.1)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8...3.13)
 SET(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS true)
 CMAKE_POLICY(SET CMP0003 NEW)
 CMAKE_POLICY(SET CMP0015 NEW)
@@ -20,13 +20,16 @@ endif()
 
 set (sb_sources
     BruteForce.cpp
+    BruteForce_omp.cpp
     HierarchicalGrid.cpp
+    HierarchicalGrid_omp.cpp
     Kdtree.cpp
     LooseOctree.cpp
     LooseOctree_omp.cpp
     Octree.cpp
     Octree_omp.cpp
     SortAndSweep.cpp
+    SortAndSweep_omp.cpp
     SphereObject.cpp
     UniformGrid.cpp
     Core.cpp
@@ -35,7 +38,9 @@ set (sb_sources
 set (sb_headers
     Base.h
     BruteForce.h
+    BruteForce_omp.h
     HierarchicalGrid.h
+    HierarchicalGrid_omp.h
     ISpatialCell.h
     ISpatialObject.h
     ISpatialStructure.h
@@ -45,6 +50,7 @@ set (sb_headers
     Octree.h
     Octree_omp.h
     SortAndSweep.h
+    SortAndSweep_omp.h
     SphereObject.h
     UniformGrid.h
     Vector3.h

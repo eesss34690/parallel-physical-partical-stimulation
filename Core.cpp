@@ -74,9 +74,12 @@
 #include "SphereObject.h"
 
 #include "BruteForce.h"
+#include "BruteForce_omp.h"
 #include "SortAndSweep.h"
+#include "SortAndSweep_omp.h"
 #include "UniformGrid.h"
 #include "HierarchicalGrid.h"
+#include "HierarchicalGrid_omp.h"
 #include "Octree.h"
 #include "Octree_omp.h"
 #include "LooseOctree.h"
@@ -244,12 +247,30 @@ static void CreateSpatialStructure()
     {
         case 1:
             delete(g_pSpatialStruct);
-            g_pSpatialStruct = new SpatialTest::BruteForce();
+            if (g_i32Speedup == 0)
+            	g_pSpatialStruct = new SpatialTest::BruteForce();
+            else if (g_i32Speedup == 1) {
+            	omp_set_num_threads(8);
+            	g_pSpatialStruct = new SpatialTest::BruteForce_omp();
+            } // else if
+            else if (g_i32Speedup == 2) {
+            	g_i32PThreadSize = g_i32ObjectCount / THREAD_CNT;
+            	g_pSpatialStruct = new SpatialTest::BruteForce();
+            } // else if
             break;
             
         case 2:
             delete(g_pSpatialStruct);
-            g_pSpatialStruct = new SpatialTest::SortAndSweep();
+            if (g_i32Speedup == 0)
+                g_pSpatialStruct = new SpatialTest::SortAndSweep();
+            else if (g_i32Speedup == 1) {
+                omp_set_num_threads(8);
+                g_pSpatialStruct = new SpatialTest::SortAndSweep_omp();
+            } // else if
+            else if (g_i32Speedup == 2) {
+                g_i32PThreadSize = g_i32ObjectCount / THREAD_CNT;
+                g_pSpatialStruct = new SpatialTest::SortAndSweep();
+            } // else if
             break;
             
         case 3:
@@ -259,7 +280,17 @@ static void CreateSpatialStructure()
             
         case 4:
             delete(g_pSpatialStruct);
-            g_pSpatialStruct = new SpatialTest::HierarchicalGrid(g_i32HashBucketCount);
+            if (g_i32Speedup == 0)
+            	g_pSpatialStruct = new SpatialTest::HierarchicalGrid(g_i32HashBucketCount);
+            else if (g_i32Speedup == 1) {
+            	omp_set_num_threads(8);
+                g_pSpatialStruct = new SpatialTest::HierarchicalGrid_omp(g_i32HashBucketCount);
+            } // else if
+            else if (g_i32Speedup == 2) {
+                g_i32PThreadSize = g_i32ObjectCount / THREAD_CNT;
+                g_pSpatialStruct = new SpatialTest::HierarchicalGrid(g_i32HashBucketCount);
+            } // else if
+            
             break;
             
         case 5:
@@ -754,10 +785,10 @@ static void RenderInfo()
     // [rad] Upper menu
     sBuf = "";
     ssSerial.str("");
-    ssSerial << "[1] Brute Force    ";
-    ssSerial << "[2] Sort and Sweep    ";
+    ssSerial << "[1] Brute Force / Brute Force (Rebuild)    ";
+    ssSerial << "[2] Sort and Sweep / Sort and Sweep (Rebuild)    ";
     ssSerial << "[3] Uniform Grid    ";
-    ssSerial << "[4] Hierarchical Grid    ";
+    ssSerial << "[4] Hierarchical Grid / Hierarchical Grid (Rebuild)    ";
     ssSerial << "[5] Octree / Octree (Rebuild)   ";
     
     sBuf = ssSerial.str();
@@ -809,13 +840,23 @@ static void RenderInfo()
     {
         case 1:
             {
-                ssSerial << "Brute force";
+            	if(!g_i32CurrentRebuild) {
+                    ssSerial << "Brute force";
+                } // if
+                else {
+                    ssSerial << "Brute force (Rebuild)";
+                } // else
             }
             break;
             
         case 2:
             {
-                ssSerial << "Sort and Sweep";
+                if(!g_i32CurrentRebuild) {
+                    ssSerial << "Sort and Sweep";
+                } // if
+                else {
+                    ssSerial << "Sort and Sweep (Rebuild)";
+                } // else
             }
             break;
             
@@ -827,7 +868,13 @@ static void RenderInfo()
             
         case 4:
             {
-                ssSerial << "Hierarchical Grid";
+                if(!g_i32CurrentRebuild) {
+                    ssSerial << "Hierarchical Grid";
+                } // if
+                else {
+                    ssSerial << "Hierarchical Grid (Rebuild)";
+                } // else
+                
             }
             break;
             
